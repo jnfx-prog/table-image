@@ -782,83 +782,62 @@
             let currentTableHTML = '';
             let toastTimer = null;
 
-            // Helper to detect hidden styles/attributes (works with inline and computed CSS)
+            // Helper to detect hidden styles/attributes
             function isElementHidden(el) {
-                if (el.hasAttribute('hidden')) return true;
-
                 const style = el.getAttribute('style') || '';
                 const heightAttr = el.getAttribute('height');
                 const widthAttr = el.getAttribute('width');
 
-                // Attribute/Inline Style inspection
-                if (/display\s*:\s*none/i.test(style)) return true;
-                if (/visibility\s*:\s*hidden/i.test(style)) return true;
-                if (/height\s*:\s*0(px|pt|em|%)?/i.test(style) || heightAttr === '0') return true;
-                if (/width\s*:\s*0(px|pt|em|%)?/i.test(style) || widthAttr === '0') return true;
+                const isDisplayNone = /display\s*:\s*none/i.test(style);
+                const isVisibilityHidden = /visibility\s*:\s*hidden/i.test(style);
+                const isZeroHeight = /height\s*:\s*0(px|pt|em|%)?/i.test(style) || heightAttr === '0';
+                const isZeroWidth = /width\s*:\s*0(px|pt|em|%)?/i.test(style) || widthAttr === '0';
+                const hasHiddenAttr = el.hasAttribute('hidden');
 
-                // Browser Computed Style inspection (when appended to DOM)
-                const computed = window.getComputedStyle(el);
-                if (computed.display === 'none') return true;
-                if (computed.visibility === 'hidden') return true;
-                if (parseFloat(computed.height) === 0) return true;
-                if (parseFloat(computed.width) === 0) return true;
-
-                return false;
+                return isDisplayNone || isVisibilityHidden || isZeroHeight || isZeroWidth || hasHiddenAttr;
             }
 
             // ─── Process Hidden Rows and Cells ──────────
             function processHTMLForHiddenCells(htmlString, includeRows, includeCols) {
                 if (!htmlString) return '';
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlString;
 
-                // Mount temporary container into DOM so computed styles (from embedded <style> tags) work
-                const container = document.createElement('div');
-                container.style.position = 'absolute';
-                container.style.left = '-9999px';
-                container.style.top = '-9999px';
-                container.style.visibility = 'hidden';
-                container.innerHTML = htmlString;
-                document.body.appendChild(container);
-
-                try {
-                    // 1. Process Hidden Rows (tr)
-                    const rows = container.querySelectorAll('tr');
-                    rows.forEach(tr => {
-                        if (isElementHidden(tr)) {
-                            if (!includeRows) {
-                                tr.remove();
-                            } else {
-                                tr.style.display = 'table-row';
-                                tr.style.visibility = 'visible';
-                                tr.style.height = 'auto';
-                                tr.style.maxHeight = 'none';
-                                tr.removeAttribute('hidden');
-                                if (tr.getAttribute('height') === '0') tr.removeAttribute('height');
-                            }
+                // 1. Process Hidden Rows (tr)
+                const rows = tempDiv.querySelectorAll('tr');
+                rows.forEach(tr => {
+                    if (isElementHidden(tr)) {
+                        if (!includeRows) {
+                            tr.remove();
+                        } else {
+                            tr.style.display = 'table-row';
+                            tr.style.visibility = 'visible';
+                            tr.style.height = 'auto';
+                            tr.removeAttribute('hidden');
+                            if (tr.getAttribute('height') === '0') tr.removeAttribute('height');
                         }
-                    });
+                    }
+                });
 
-                    // 2. Process Hidden Columns & Cells (td, th, col, colgroup)
-                    const colsAndCells = container.querySelectorAll('td, th, col, colgroup');
-                    colsAndCells.forEach(el => {
-                        if (isElementHidden(el)) {
-                            if (!includeCols) {
-                                el.remove();
-                            } else {
-                                el.style.display = (el.tagName === 'TD' || el.tagName === 'TH') ? 'table-cell' : 'block';
-                                el.style.visibility = 'visible';
-                                el.style.height = 'auto';
-                                el.style.width = 'auto';
-                                el.removeAttribute('hidden');
-                                if (el.getAttribute('height') === '0') el.removeAttribute('height');
-                                if (el.getAttribute('width') === '0') el.removeAttribute('width');
-                            }
+                // 2. Process Hidden Columns & Cells (td, th, col, colgroup)
+                const colsAndCells = tempDiv.querySelectorAll('td, th, col, colgroup');
+                colsAndCells.forEach(el => {
+                    if (isElementHidden(el)) {
+                        if (!includeCols) {
+                            el.remove();
+                        } else {
+                            el.style.display = (el.tagName === 'TD' || el.tagName === 'TH') ? 'table-cell' : 'block';
+                            el.style.visibility = 'visible';
+                            el.style.height = 'auto';
+                            el.style.width = 'auto';
+                            el.removeAttribute('hidden');
+                            if (el.getAttribute('height') === '0') el.removeAttribute('height');
+                            if (el.getAttribute('width') === '0') el.removeAttribute('width');
                         }
-                    });
+                    }
+                });
 
-                    return container.innerHTML;
-                } finally {
-                    document.body.removeChild(container);
-                }
+                return tempDiv.innerHTML;
             }
 
             // ─── State Management ────────────────
@@ -991,12 +970,7 @@
                             wrapper.appendChild(clonedTable);
                             tableFragments.push(wrapper.outerHTML);
                         });
-                        // Preserve embedded <style> tags from Excel / Sheets if present
-                        const styles = tempDiv.querySelectorAll('style');
-                        let styleHTML = '';
-                        styles.forEach(s => styleHTML += s.outerHTML);
-
-                        setFilledState(styleHTML + tableFragments.join(''));
+                        setFilledState(tableFragments.join(''));
                         showToast('Table pasted successfully!', 'success');
                         return;
                     }
@@ -1176,3 +1150,4 @@
 </body>
 
 </html>
+
