@@ -1,29 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><!-- PLAYABLE_TOUCH_PATCH_V1 --><script>
-(function() {
-  if (window.__playableTouchPatchInstalled) return;
-  window.__playableTouchPatchInstalled = true;
-  var origAdd = EventTarget.prototype.addEventListener;
-  var blockedTypes = { touchstart: 1, touchmove: 1, wheel: 1 };
-  EventTarget.prototype.addEventListener = function(type, listener, options) {
-    if (blockedTypes[type]) {
-      if (options === undefined || options === null) {
-        options = { passive: true };
-      } else if (typeof options === 'boolean') {
-        options = { capture: options, passive: true };
-      } else {
-        options = Object.assign({}, options, { passive: true });
-      }
-    }
-    return origAdd.call(this, type, listener, options);
-  };
-})();
-</script><script>window.Intl=window.Intl||{};Intl.t=function(s){return(Intl._locale&&Intl._locale[s])||s;};</script>
+
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Table Paste & Export — Clipboard to Image</title>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">
+    </script>
     <style>
         :root {
             --bg: #f0f3f7;
@@ -52,477 +35,1028 @@
             --transition-slow: 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
             --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
         }
-        * { margin:0; padding:0; box-sizing:border-box; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         body {
             font-family: var(--font);
             background: var(--bg);
             min-height: 100vh;
-            display:flex; align-items:center; justify-content:center; padding:20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background-image:
+                radial-gradient(ellipse at 30% 20%, rgba(79, 110, 247, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 70%, rgba(16, 185, 129, 0.03) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.01) 0%, transparent 80%);
         }
+
+        /* ─── Main Card ─────────────────────── */
         .app-card {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-lg);
-            width:100%; max-width:1100px; min-width:340px;
-            display:flex; flex-direction:column; overflow:hidden;
+            width: 100%;
+            max-width: 1100px;
+            min-width: 340px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: box-shadow var(--transition-slow), transform var(--transition-slow);
+            animation: cardEntry 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
         }
+
+        @keyframes cardEntry {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .app-card.has-content {
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* ─── Header ───────────────────────── */
         .app-header {
-            display:flex; align-items:center; justify-content:space-between;
-            padding:18px 24px; border-bottom:1px solid var(--border); gap:12px; flex-wrap:wrap; background:#fafbfc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            gap: 12px;
+            flex-wrap: wrap;
+            background: #fafbfc;
+            user-select: none;
         }
-        .header-left{display:flex; align-items:center; gap:10px;}
-        .logo-icon{width:38px; height:38px; border-radius:10px; background:var(--accent-light); display:flex; align-items:center; justify-content:center;}
-        .app-title{font-size:1.15rem; font-weight:700; color:var(--text);}
-        .header-actions{display:flex; align-items:center; gap:10px;}
-        /* EXPORT OPTIONS - NEW */
-        .export-options {
-            display:flex; gap:12px; align-items:center; flex-wrap:wrap;
-            padding:12px 24px; border-bottom:1px solid var(--border);
-            background:#fcfdff;
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .export-options .toggle {
-            display:inline-flex; align-items:center; gap:7px;
-            font-size:0.84rem; font-weight:600; color:var(--text);
-            cursor:pointer; user-select:none;
-            padding:7px 12px; border-radius:20px;
-            background:var(--bg); border:1px solid var(--border);
-            transition: all var(--transition-fast);
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--accent-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform var(--transition-fast);
         }
-        .export-options .toggle:hover{border-color:var(--accent); background:var(--accent-light);}
-        .export-options .toggle input{accent-color:var(--accent); width:14px; height:14px;}
-        .export-options .hint{font-size:0.75rem; color:var(--text-secondary); margin-left:auto;}
+
+        .logo-icon svg {
+            width: 20px;
+            height: 20px;
+            color: var(--accent);
+        }
+
+        .app-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+
+        .app-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            display: none;
+        }
+
+        @media (min-width: 500px) {
+            .app-subtitle {
+                display: inline;
+            }
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        /* ─── Buttons ──────────────────────── */
         .btn {
-            display:inline-flex; align-items:center; gap:7px;
-            padding:10px 16px; border-radius:25px; font-size:0.875rem; font-weight:600;
-            cursor:pointer; border:none; white-space:nowrap; transition:all var(--transition-fast);
-            font-family:var(--font);
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 16px;
+            border-radius: 25px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+            font-family: var(--font);
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        .btn-primary{background:var(--accent); color:white;}
-        .btn-primary:hover{background:var(--accent-hover);}
-        .btn-ghost{background:var(--bg); color:var(--text-secondary); border:1px solid var(--border);}
-        .btn-ghost:hover{background:white;}
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 25px;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+            pointer-events: none;
+        }
+
+        .btn:active::after {
+            opacity: 0.12;
+            background: currentColor;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(79, 110, 247, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 16px rgba(79, 110, 247, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+            box-shadow: 0 1px 4px rgba(79, 110, 247, 0.25);
+        }
+
+        .btn-primary .btn-icon {
+            width: 17px;
+            height: 17px;
+        }
+
+        .btn-outline {
+            background: #fff;
+            color: var(--text);
+            border: 1.5px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            border-color: #c4c9d4;
+            background: #f9fafb;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-outline:active {
+            background: #f3f4f6;
+            transform: scale(0.96);
+        }
+
+        .btn-outline .btn-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 8px 10px;
+            border-radius: 10px;
+        }
+
+        .btn-ghost:hover {
+            background: #f3f4f6;
+            color: var(--text);
+        }
+
+        .btn-ghost .btn-icon {
+            width: 15px;
+            height: 15px;
+        }
+
+        /* ─── Display / Paste Area ─────────── */
+        .display-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 320px;
+            transition: min-height var(--transition);
+        }
+
         .paste-zone {
-            border:2px dashed var(--border-dashed); border-radius:var(--radius);
-            margin:24px; padding:48px 24px; text-align:center; color:var(--text-secondary);
-            cursor:text; outline:none; min-height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 24px;
+            border-radius: var(--radius);
+            transition: all var(--transition);
+            position: relative;
+            cursor: pointer;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        .paste-zone:focus{border-color:var(--accent); background:var(--accent-light);}
-        .table-display{padding:0 24px 24px; overflow:auto; max-height:65vh;}
-        .table-display table{border-collapse:collapse; width:100%; background:white;}
-        .table-display th, .table-display td{border:1px solid var(--border); padding:8px 12px; text-align:left; font-size:0.9rem;}
-        .table-display th{background:#f8fafc; font-weight:700;}
-        /* capture ready - disable transforms */
-        .capture-ready{transform:none !important; animation:none !important;}
-        .toast-container{position:fixed; bottom:20px; right:20px; display:flex; flex-direction:column; gap:8px; z-index:9999;}
-        .toast{background:#1f2937; color:white; padding:10px 14px; border-radius:10px; font-size:0.85rem; display:flex; align-items:center; gap:8px; box-shadow:var(--shadow-lg);}
-        .toast-dot{width:8px; height:8px; border-radius:50%;}
-        .toast.out{opacity:0; transform:translateY(8px); transition:all 0.3s;}
-        .capture-flash{position:fixed; inset:0; background:white; opacity:0; pointer-events:none; z-index:9998; transition:opacity 0.12s;}
-        .capture-flash.active{opacity:0.7;}
+
+        /* Empty state styling */
+        .paste-zone.idle {
+            border: 2.5px dashed var(--border-dashed);
+            background: #fafbfd;
+            min-height: 260px;
+        }
+
+        .paste-zone.idle:hover {
+            border-color: #b0b8c6;
+            background: #f7f9fc;
+            box-shadow: inset 0 0 0 1px rgba(79, 110, 247, 0.04);
+        }
+
+        .paste-zone.idle:focus-within,
+        .paste-zone.idle:focus {
+            border-color: var(--accent);
+            background: #f8f9ff;
+            box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.07), inset 0 0 0 1px rgba(79, 110, 247, 0.06);
+        }
+
+        /* Filled state styling */
+        .paste-zone.filled {
+            border: 1.5px solid transparent;
+            background: #fff;
+            cursor: default;
+            min-height: auto;
+            margin: 16px 20px;
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow);
+            animation: zoneFill 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+        }
+
+        @keyframes zoneFill {
+            from {
+                box-shadow: var(--shadow-sm);
+                border-color: var(--accent-light);
+            }
+
+            to {
+                box-shadow: var(--shadow);
+                border-color: transparent;
+            }
+        }
+
+        /* The scrollable table container */
+        .table-viewport {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 65vh;
+            border-radius: 8px;
+            scroll-behavior: smooth;
+            transition: all var(--transition);
+        }
+
+        .table-viewport::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+
+        .table-viewport::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 3px;
+        }
+
+        .table-viewport::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        .table-viewport::-webkit-scrollbar-thumb:hover {
+            background: #b0b7c3;
+        }
+
+        .table-viewport::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+
+        /* The actual pasted content area */
+        .table-display {
+            padding: 12px 8px;
+            display: inline-block;
+            min-width: 100%;
+            animation: contentFadeIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            transform-origin: top center;
+        }
+
+        @keyframes contentFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px) scale(0.985);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .table-display.refresh-anim {
+            animation: none;
+        }
+
+        .table-display.refresh-anim {
+            animation: contentFadeIn 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+        }
+
+        /* Preserve table styles from Excel/Sheets */
+        .table-display table {
+            border-collapse: collapse;
+            font-size: inherit;
+            margin: 0 auto;
+            background: #fff;
+        }
+
+        .table-display table td,
+        .table-display table th {
+            padding: 6px 10px;
+            vertical-align: middle;
+        }
+
+        /* ─── Placeholder ──────────────────── */
+        .placeholder-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            pointer-events: none;
+            user-select: none;
+            text-align: center;
+            padding: 20px;
+            transition: opacity var(--transition-fast);
+        }
+
+        .paste-zone.filled .placeholder-content {
+            display: none;
+        }
+
+        .placeholder-icon-wrapper {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .placeholder-icon-wrapper svg {
+            width: 30px;
+            height: 30px;
+            color: var(--accent);
+        }
+
+        .placeholder-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+
+        .placeholder-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            max-width: 320px;
+        }
+
+        .placeholder-kbd {
+            display: inline-block;
+            background: #eef1f6;
+            border: 1px solid #dde1e8;
+            border-radius: 5px;
+            padding: 2px 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--text-secondary);
+            margin: 0 2px;
+            font-family: var(--font);
+        }
+
+        /* ─── Toast Notifications ──────────── */
+        .toast-container {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        @media (max-width: 500px) {
+            .toast-container {
+                bottom: 16px;
+                right: 12px;
+                left: 12px;
+                align-items: stretch;
+            }
+        }
+
+        .toast {
+            background: #1e1e2e;
+            color: #fff;
+            padding: 13px 20px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            pointer-events: auto;
+            animation: toastIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.01em;
+            max-width: 400px;
+            font-family: var(--font);
+        }
+
+        .toast.success {
+            background: #065f46;
+            box-shadow: 0 8px 28px rgba(16, 185, 129, 0.35);
+        }
+
+        .toast.warning {
+            background: #78350f;
+            box-shadow: 0 8px 28px rgba(245, 158, 11, 0.3);
+        }
+
+        .toast.info {
+            background: #1e3a5f;
+            box-shadow: 0 8px 28px rgba(79, 110, 247, 0.3);
+        }
+
+        .toast.out {
+            animation: toastOut 0.3s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(14px) scale(0.88);
+            }
+        }
+
+        .toast-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .toast.success .toast-dot {
+            background: #34d399;
+        }
+
+        .toast.warning .toast-dot {
+            background: #fbbf24;
+        }
+
+        .toast.info .toast-dot {
+            background: #60a5fa;
+        }
+
+        /* ─── Capture flash overlay ────────── */
+        .capture-flash {
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9998;
+            transition: opacity 0.08s ease-out;
+        }
+
+        .capture-flash.active {
+            opacity: 0.55;
+            transition: opacity 0s;
+        }
+
+        /* Freeze class for sharp capture (no animations) */
+        .capture-ready {
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+        }
+
+        /* ─── Responsive ──────────────────── */
+        @media (max-width: 640px) {
+            .app-header {
+                padding: 14px 16px;
+                gap: 8px;
+            }
+
+            .app-title {
+                font-size: 1rem;
+            }
+
+            .btn {
+                padding: 8px 13px;
+                font-size: 0.8rem;
+                gap: 5px;
+                border-radius: 22px;
+            }
+
+            .btn .btn-icon {
+                width: 14px;
+                height: 14px;
+            }
+
+            .paste-zone {
+                margin: 12px 14px;
+                border-radius: var(--radius-sm);
+            }
+
+            .paste-zone.idle {
+                min-height: 200px;
+            }
+
+            .paste-zone.filled {
+                margin: 10px 12px;
+                border-radius: 8px;
+            }
+
+            .table-display {
+                padding: 8px 4px;
+            }
+
+            .display-wrapper {
+                min-height: 240px;
+            }
+
+            .placeholder-icon-wrapper {
+                width: 50px;
+                height: 50px;
+            }
+
+            .placeholder-icon-wrapper svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            .placeholder-title {
+                font-size: 0.95rem;
+            }
+
+            .placeholder-desc {
+                font-size: 0.78rem;
+                max-width: 260px;
+            }
+        }
     </style>
 </head>
+
 <body>
+
+    <!-- ─── App Card ──────────────────────── -->
     <div class="app-card" id="appCard">
-        <div class="app-header">
+        <!-- Header -->
+        <header class="app-header">
             <div class="header-left">
-                <div class="logo-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                <div class="logo-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2.5" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="3" x2="9" y2="21" />
+                    </svg>
                 </div>
-                <div class="app-title">Table Paste & Export</div>
+                <span class="app-title">Table Paste &amp; Export</span>
+                <span class="app-subtitle">· Clipboard to Image ni Jopring</span>
             </div>
             <div class="header-actions">
-                <button class="btn btn-ghost" id="btnClear">Clear</button>
-                <button class="btn btn-ghost" id="btnCopy">Copy Table</button>
-                <button class="btn btn-primary" id="btnSaveImage">Save as Image</button>
+                <button class="btn btn-outline" id="btnClear" title="Clear table (Esc)">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <line x1="10" y1="10" x2="10" y2="18" />
+                        <line x1="14" y1="10" x2="14" y2="18" />
+                    </svg>
+                    Clear
+                </button>
+                <button class="btn btn-primary" id="btnSaveImage" title="Save as PNG image (Ctrl+S)">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Save Image
+                </button>
+            </div>
+        </header>
+
+        <!-- Display / Paste Area -->
+        <div class="display-wrapper" id="displayWrapper">
+            <div class="paste-zone idle" id="pasteZone" tabindex="0" role="region" aria-label="Paste area">
+                <!-- Placeholder (visible when empty) -->
+                <div class="placeholder-content" id="placeholderContent">
+                    <div class="placeholder-icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="3" />
+                            <line x1="3" y1="9" x2="21" y2="9" />
+                            <line x1="9" y1="3" x2="9" y2="21" />
+                            <rect x="7" y="13" width="4" height="3" rx="0.5" fill="currentColor" opacity="0.35" />
+                            <rect x="13" y="13" width="4" height="3" rx="0.5" fill="currentColor" opacity="0.35" />
+                        </svg>
+                    </div>
+                    <span class="placeholder-title">Paste your table here</span>
+                    <span class="placeholder-desc">
+                        Copy from <strong>Excel</strong> or <strong>Google Sheets</strong>,<br>
+                        then press <span class="placeholder-kbd">Ctrl</span>+<span class="placeholder-kbd">V</span>
+                        or click here and paste.
+                    </span>
+                </div>
+                <!-- Table viewport (visible when filled) -->
+                <div class="table-viewport" id="tableViewport" style="display:none;">
+                    <div class="table-display" id="tableDisplay"></div>
+                </div>
             </div>
         </div>
-
-        <!-- NEW OPTIONS -->
-        <div class="export-options" id="exportOptions">
-            <label class="toggle" title="If checked, rows hidden via display:none, visibility:hidden, height 0 or Excel hidden rows will not be copied or exported">
-                <input type="checkbox" id="excludeHiddenRows" checked>
-                Exclude hidden rows
-            </label>
-            <label class="toggle" title="If checked, cells/columns hidden via display:none or filtered out will not be copied or exported">
-                <input type="checkbox" id="excludeFilteredCells" checked>
-                Exclude filtered / hidden cells
-            </label>
-            <span class="hint">Applies to Copy & Save as Image & Ctrl+C from table</span>
-        </div>
-
-        <div class="paste-zone" id="pasteZone" contenteditable="true" tabindex="0">
-            <strong>Paste your table here</strong>
-            <span>Ctrl+V from Excel / Sheets / HTML</span>
-            <small style="opacity:0.6">Hidden rows will be preserved but can be excluded on export</small>
-        </div>
-        <div class="table-display" id="tableDisplay" style="display:none;"></div>
     </div>
-    <div class="capture-flash" id="captureFlash"></div>
+
+    <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
+    <!-- Capture flash -->
+    <div class="capture-flash" id="captureFlash"></div>
 
-<script>
-(function(){
-    const pasteZone = document.getElementById('pasteZone');
-    const tableDisplay = document.getElementById('tableDisplay');
-    const btnClear = document.getElementById('btnClear');
-    const btnCopy = document.getElementById('btnCopy');
-    const btnSaveImage = document.getElementById('btnSaveImage');
-    const toastContainer = document.getElementById('toastContainer');
-    const captureFlash = document.getElementById('captureFlash');
-    const excludeHiddenRowsEl = document.getElementById('excludeHiddenRows');
-    const excludeFilteredEl = document.getElementById('excludeFilteredCells');
-    const appCard = document.getElementById('appCard');
+    <script>
+        (function () {
+            // ─── DOM References ──────────────────
+            const appCard = document.getElementById('appCard');
+            const pasteZone = document.getElementById('pasteZone');
+            const placeholderContent = document.getElementById('placeholderContent');
+            const tableViewport = document.getElementById('tableViewport');
+            const tableDisplay = document.getElementById('tableDisplay');
+            const btnClear = document.getElementById('btnClear');
+            const btnSaveImage = document.getElementById('btnSaveImage');
+            const toastContainer = document.getElementById('toastContainer');
+            const captureFlash = document.getElementById('captureFlash');
+            const displayWrapper = document.getElementById('displayWrapper');
 
-    let hasContent = false;
-    let toastTimer = null;
+            let hasContent = false;
+            let currentTableHTML = '';
+            let toastTimer = null;
 
-    // ─── Helpers: hidden detection ─────────────────────────────
-    function isElementHiddenByStyle(el){
-        if (!el) return false;
-        if (el.hasAttribute && el.hasAttribute('hidden')) return true;
-        if (el.getAttribute && el.getAttribute('aria-hidden') === 'true') return true;
-        // Check inline style string for Excel
-        const styleAttr = (el.getAttribute && el.getAttribute('style') || '').toLowerCase();
-        if (styleAttr.includes('display:none') || styleAttr.includes('display: none')) return true;
-        if (styleAttr.includes('visibility:hidden') || styleAttr.includes('visibility: hidden')) return true;
-        if (styleAttr.includes('mso-hide:all')) return true;
+            // ─── State Management ────────────────
+            function setFilledState(html) {
+                currentTableHTML = html;
+                tableDisplay.innerHTML = html;
+                // Trigger refresh animation
+                tableDisplay.classList.remove('refresh-anim');
+                void tableDisplay.offsetWidth; // force reflow
+                tableDisplay.classList.add('refresh-anim');
 
-        // computed style - only if attached to DOM
-        try {
-            const cs = window.getComputedStyle(el);
-            if (cs.display === 'none') return true;
-            if (cs.visibility === 'hidden') return true;
-            if (cs.visibility === 'collapse') return true;
-        } catch(e){}
-        if (el.style && el.style.display === 'none') return true;
-        if (el.style && el.style.visibility === 'hidden') return true;
-        return false;
-    }
+                placeholderContent.style.display = 'none';
+                tableViewport.style.display = 'block';
+                pasteZone.classList.remove('idle');
+                pasteZone.classList.add('filled');
+                appCard.classList.add('has-content');
+                pasteZone.style.cursor = 'default';
+                hasContent = true;
+                btnClear.style.display = '';
+                btnSaveImage.style.display = '';
 
-    function isRowHidden(tr){
-        if (isElementHiddenByStyle(tr)) return true;
-        // Excel filtered rows sometimes have height 0 and no client rects
-        if (tr.offsetParent === null) {
-            const rects = tr.getClientRects();
-            if (rects.length === 0) return true;
-        }
-        if (tr.offsetHeight === 0 && tr.offsetWidth === 0) {
-            // if it has content but zero size, treat as hidden
-            const text = tr.textContent.trim();
-            if (text.length > 0) return true;
-        }
-        // If all cells hidden, row is effectively hidden
-        const cells = tr.cells ? [...tr.cells] : [];
-        if (cells.length > 0 && cells.every(c => isElementHiddenByStyle(c))) return true;
-        // data-filtered custom
-        if (tr.dataset && (tr.dataset.hidden === 'true' || tr.dataset.filtered === 'true')) return true;
-        return false;
-    }
+                // Auto-scroll to show the table
+                requestAnimationFrame(() => {
+                    tableViewport.scrollTop = 0;
+                    tableViewport.scrollLeft = 0;
+                });
 
-    function isCellHidden(cell){
-        if (isElementHiddenByStyle(cell)) return true;
-        if (cell.offsetParent === null && cell.getClientRects().length === 0) {
-            // still hidden if style says so
-            return true;
-        }
-        return false;
-    }
+                // Adjust min-height of display wrapper
+                displayWrapper.style.minHeight = Math.max(180, tableDisplay.scrollHeight + 80) + 'px';
+            }
 
-    // ─── Build filtered clone ─────────────────────────────────
-    function buildFilteredTableClone(){
-        const sourceTable = tableDisplay.querySelector('table');
-        if (!sourceTable) return null;
+            function setEmptyState() {
+                currentTableHTML = '';
+                tableDisplay.innerHTML = '';
+                placeholderContent.style.display = '';
+                tableViewport.style.display = 'none';
+                pasteZone.classList.add('idle');
+                pasteZone.classList.remove('filled');
+                appCard.classList.remove('has-content');
+                pasteZone.style.cursor = 'pointer';
+                hasContent = false;
+                displayWrapper.style.minHeight = '320px';
+            }
 
-        // We clone to avoid touching original computed styles detection
-        const clone = sourceTable.cloneNode(true);
+            // ─── Generate table from plain text (tab‑separated) ──
+            function textToTable(plainText) {
+                const lines = plainText.split(/\r?\n/).filter(line => line.trim() !== '');
+                if (lines.length === 0) return null;
+                const rows = lines.map(line => line.split('\t'));
+                const maxCols = Math.max(...rows.map(r => r.length));
+                // Build table HTML with basic styling for visibility
+                let html = '<table style="border-collapse: collapse; width: auto; font-size: 0.9rem;">';
+                rows.forEach(row => {
+                    html += '<tr>';
+                    for (let i = 0; i < maxCols; i++) {
+                        const cell = row[i] || '';
+                        html +=
+                            `<td style="border: 1px solid #d1d5db; padding: 6px 10px; white-space: nowrap;">${escapeHTML(cell)}</td>`;
+                    }
+                    html += '</tr>';
+                });
+                html += '</table>';
+                return html;
+            }
 
-        const origRows = [...sourceTable.querySelectorAll('tr')];
-        const cloneRows = [...clone.querySelectorAll('tr')];
+            function escapeHTML(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
 
-        // First pass: remove hidden rows
-        if (excludeHiddenRowsEl.checked) {
-            cloneRows.forEach((cTr, i) => {
-                const oTr = origRows[i];
-                if (!oTr) return;
-                if (isRowHidden(oTr)) {
-                    cTr.setAttribute('data-remove', 'row-hidden');
+            // ─── Clipboard Paste Handler ─────────
+            function handlePaste(e) {
+                const activeEl = document.activeElement;
+                if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' ||
+                    activeEl.isContentEditable)) {
+                    if (activeEl !== pasteZone && !pasteZone.contains(activeEl)) {
+                        return;
+                    }
+                }
+
+                const clipboardData = e.clipboardData;
+                if (!clipboardData) return;
+
+                const htmlData = clipboardData.getData('text/html');
+                const plainText = clipboardData.getData('text/plain');
+
+                if (!htmlData && !plainText) return;
+
+                e.preventDefault();
+
+                // Try to extract tables from HTML
+                if (htmlData) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = htmlData;
+                    const tables = tempDiv.querySelectorAll('table');
+
+                    if (tables.length > 0) {
+                        const tableFragments = [];
+                        tables.forEach((table) => {
+                            const clonedTable = table.cloneNode(true);
+                            const wrapper = document.createElement('div');
+                            wrapper.style.marginBottom = tables.length > 1 ? '16px' : '0';
+                            wrapper.appendChild(clonedTable);
+                            tableFragments.push(wrapper.outerHTML);
+                        });
+                        setFilledState(tableFragments.join(''));
+                        showToast('Table pasted successfully!', 'success');
+                        return;
+                    }
+
+                    // If HTML exists but no <table> found, fall through to plain text logic
+                }
+
+                // If plain text contains tabs, convert to table
+                if (plainText && plainText.includes('\t')) {
+                    const generatedTable = textToTable(plainText);
+                    if (generatedTable) {
+                        setFilledState(generatedTable);
+                        showToast('Table reconstructed from tab‑separated text', 'info');
+                        return;
+                    }
+                }
+
+                // Last resort: display plain text as preformatted
+                if (plainText && plainText.trim()) {
+                    const preHTML =
+                        `<pre style="font-family: monospace; white-space: pre-wrap; padding: 16px; background: #f9fafb; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; color: #1a1a2e;">${escapeHTML(plainText.trim())}</pre>`;
+                    setFilledState(preHTML);
+                    showToast('Plain text pasted (no table structure detected)', 'info');
+                }
+            }
+
+            // ─── Global paste listener ──────────
+            document.addEventListener('paste', handlePaste);
+            pasteZone.addEventListener('paste', function (e) {
+                if (!hasContent) pasteZone.focus();
+            });
+            pasteZone.addEventListener('click', function (e) {
+                if (!hasContent) pasteZone.focus();
+            });
+
+            // ─── Clear Button ───────────────────
+            btnClear.addEventListener('click', function () {
+                if (hasContent) {
+                    tableDisplay.style.opacity = '0';
+                    tableDisplay.style.transform = 'translateY(6px) scale(0.98)';
+                    tableDisplay.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+                    setTimeout(() => {
+                        setEmptyState();
+                        tableDisplay.style.opacity = '';
+                        tableDisplay.style.transform = '';
+                        tableDisplay.style.transition = '';
+                        pasteZone.focus();
+                        showToast('Table cleared', 'info');
+                    }, 200);
                 }
             });
-        }
 
-        // Also handle filtered rows marked via Excel (same as hidden, but separate toggle if user wants)
-        // For filtered cells toggle, we mark hidden cells
-        if (excludeFilteredEl.checked) {
-            // need to walk per row to map cells
-            origRows.forEach((oTr, rIdx) => {
-                const cTr = cloneRows[rIdx];
-                if (!cTr || cTr.getAttribute('data-remove')) return;
-                const oCells = [...oTr.children].filter(el => el.tagName === 'TD' || el.tagName === 'TH');
-                const cCells = [...cTr.children].filter(el => el.tagName === 'TD' || el.tagName === 'TH');
-                oCells.forEach((oCell, cIdx) => {
-                    const cCell = cCells[cIdx];
-                    if (!cCell) return;
-                    if (isCellHidden(oCell)) {
-                        cCell.setAttribute('data-remove', 'cell-hidden');
+            // ─── Save Image Button (tightly cropped, no white allowance) ──
+            btnSaveImage.addEventListener('click', function () {
+                if (!hasContent || !currentTableHTML) {
+                    showToast('Nothing to save. Paste a table first.', 'warning');
+                    return;
+                }
+
+                captureFlash.classList.add('active');
+                setTimeout(() => captureFlash.classList.remove('active'), 120);
+
+                const originalHTML = btnSaveImage.innerHTML;
+                btnSaveImage.innerHTML = `
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="animation: spin 0.8s linear infinite;">
+                        <circle cx="12" cy="12" r="10" stroke-dasharray="32 12" stroke-linecap="round"/>
+                    </svg>
+                    Saving...
+                `;
+                btnSaveImage.style.pointerEvents = 'none';
+                btnSaveImage.style.opacity = '0.8';
+
+                if (!document.getElementById('spin-keyframe')) {
+                    const styleEl = document.createElement('style');
+                    styleEl.id = 'spin-keyframe';
+                    styleEl.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+                    document.head.appendChild(styleEl);
+                }
+
+                // Freeze animations / transforms for a pixel‑perfect capture
+                tableDisplay.classList.add('capture-ready');
+
+                // Clone the table content into a zero‑padding container cropped tightly to table bounds
+                const tableClone = tableDisplay.cloneNode(true);
+                tableClone.style.position = 'absolute';
+                tableClone.style.top = '-9999px';
+                tableClone.style.left = '-9999px';
+                tableClone.style.padding = '0';
+                tableClone.style.margin = '0';
+                tableClone.style.width = 'max-content';
+                tableClone.style.minWidth = 'auto';
+                tableClone.style.maxWidth = 'none';
+                tableClone.style.height = 'auto';
+                tableClone.style.display = 'inline-block';   // shrink-wrap tightly to table dimensions
+
+                // Remove left/right margins from all inner elements in the clone
+                tableClone.querySelectorAll('*').forEach((el) => {
+                    el.style.marginLeft = '0';
+                    el.style.marginRight = '0';
+                });
+
+                document.body.appendChild(tableClone);
+
+                // Wait for the clone to be measured, then capture
+                requestAnimationFrame(() => {
+                    html2canvas(tableClone, {
+                        scale: 3,                     // high resolution
+                        backgroundColor: '#ffffff',
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false,
+                    }).then((canvas) => {
+                        canvas.toBlob((blob) => {
+                            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                            const filename = `table-export-${timestamp}.png`;
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            showToast('Image saved! 📸 ' + filename, 'success');
+                        }, 'image/png', 1.0);
+                    }).catch((err) => {
+                        console.error('html2canvas error:', err);
+                        showToast('Failed to capture image. Try again.', 'warning');
+                    }).finally(() => {
+                        // Cleanup
+                        document.body.removeChild(tableClone);
+                        tableDisplay.classList.remove('capture-ready');
+                        btnSaveImage.innerHTML = originalHTML;
+                        btnSaveImage.style.pointerEvents = '';
+                        btnSaveImage.style.opacity = '';
+                    });
+                });
+            });
+
+            // ─── Toast System ───────────────────
+            function showToast(message, type = 'info') {
+                if (toastTimer) clearTimeout(toastTimer);
+                const existingToasts = toastContainer.querySelectorAll('.toast');
+                if (existingToasts.length >= 2) {
+                    const oldest = existingToasts[existingToasts.length - 1];
+                    oldest.classList.add('out');
+                    setTimeout(() => oldest.remove(), 300);
+                }
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                const dotColor = type === 'success' ? '#34d399' : type === 'warning' ? '#fbbf24' : '#60a5fa';
+                toast.innerHTML = `<span class="toast-dot" style="background:${dotColor};"></span>${message}`;
+                toastContainer.appendChild(toast);
+                toastTimer = setTimeout(() => {
+                    toast.classList.add('out');
+                    setTimeout(() => {if (toast.parentNode) toast.remove();}, 300);
+                }, 2800);
+            }
+
+            // ─── Keyboard Shortcuts ─────────────
+            document.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    if (hasContent) {
+                        e.preventDefault();
+                        btnSaveImage.click();
                     }
-                });
+                }
+                if (e.key === 'Escape' && hasContent) {
+                    const activeEl = document.activeElement;
+                    if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA' && !activeEl
+                        .isContentEditable)) {
+                        e.preventDefault();
+                        btnClear.click();
+                    }
+                }
             });
-        }
 
-        // Actually remove
-        clone.querySelectorAll('[data-remove="row-hidden"]').forEach(el => el.remove());
-        if (excludeFilteredEl.checked) {
-            clone.querySelectorAll('[data-remove="cell-hidden"]').forEach(el => el.remove());
-        }
+            // ─── Initialization ─────────────────
+            setEmptyState();
+            btnClear.style.display = '';
+            btnSaveImage.style.display = '';
+            setTimeout(() => {
+                if (!hasContent) pasteZone.focus();
+            }, 600);
 
-        // Clean up empty rows left after cell removal
-        clone.querySelectorAll('tr').forEach(tr => {
-            if (tr.children.length === 0) tr.remove();
-        });
-
-        return clone;
-    }
-
-    function getFilteredTableHTMLAndText(){
-        const filtered = buildFilteredTableClone();
-        if (!filtered) return null;
-        const html = filtered.outerHTML;
-        const text = [...filtered.querySelectorAll('tr')].map(tr => {
-            const cells = [...tr.querySelectorAll('th, td')];
-            return cells.map(c => c.innerText.replace(/\t/g,' ')).join('\t');
-        }).join('\n');
-        return {html, text, tableEl: filtered};
-    }
-
-    // ─── Paste Handling ───────────────────────────────────────
-    function setEmptyState(){
-        hasContent = false;
-        tableDisplay.style.display = 'none';
-        pasteZone.style.display = 'flex';
-        appCard.classList.remove('has-content');
-    }
-
-    function setHasContent(){
-        hasContent = true;
-        pasteZone.style.display = 'none';
-        tableDisplay.style.display = 'block';
-        appCard.classList.add('has-content');
-    }
-
-    pasteZone.addEventListener('paste', (e) => {
-        e.preventDefault();
-        const htmlData = e.clipboardData.getData('text/html');
-        const textData = e.clipboardData.getData('text/plain');
-
-        let table = null;
-
-        if (htmlData) {
-            const div = document.createElement('div');
-            div.innerHTML = htmlData;
-            table = div.querySelector('table');
-            if (!table) {
-                // try to build from div with many divs? fallback to text
-            }
-        }
-
-        if (!table && textData) {
-            // Build table from TSV (Excel copies as tab separated)
-            const rows = textData.trim().split(/\r?\n/);
-            table = document.createElement('table');
-            const tbody = document.createElement('tbody');
-            rows.forEach(r => {
-                const tr = document.createElement('tr');
-                // preserve empty cells, but don't create hidden rows here
-                r.split('\t').forEach(cellText => {
-                    const td = document.createElement('td');
-                    td.textContent = cellText;
-                    tr.appendChild(td);
-                });
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-        }
-
-        if (table) {
-            // Keep hidden styles! Do NOT strip display:none
-            // Clean up unwanted attributes but keep display/visibility
-            tableDisplay.innerHTML = '';
-            tableDisplay.appendChild(table);
-            setHasContent();
-            showToast('Table pasted. ' + table.querySelectorAll('tr').length + ' rows', 'info');
-        } else {
-            showToast('No table found in clipboard', 'warning');
-        }
-    });
-
-    // ─── Copy Handling (button + native Ctrl+C) ───────────────
-    function copyTable(){
-        if (!hasContent) { showToast('Nothing to copy','warning'); return; }
-
-        const data = getFilteredTableHTMLAndText();
-        if (!data) { showToast('Failed to prepare table','warning'); return; }
-
-        // Use Clipboard API with HTML
-        const blobHtml = new Blob([data.html], {type:'text/html'});
-        const blobText = new Blob([data.text], {type:'text/plain'});
-        const item = new ClipboardItem({
-            'text/html': blobHtml,
-            'text/plain': blobText
-        });
-
-        navigator.clipboard.write([item]).then(() => {
-            const excludedCount = tableDisplay.querySelectorAll('table tr').length - data.tableEl.querySelectorAll('tr').length;
-            let msg = 'Table copied!';
-            if (excludedCount > 0 && excludeHiddenRowsEl.checked) {
-                msg += ` (${excludedCount} hidden row(s) excluded)`;
-            }
-            showToast(msg + ' 📋', 'success');
-        }).catch(() => {
-            // Fallback
-            navigator.clipboard.writeText(data.text).then(()=>{
-                showToast('Table copied as text (fallback) 📋','success');
-            });
-        });
-    }
-
-    btnCopy.addEventListener('click', copyTable);
-
-    // Intercept native copy from tableDisplay to respect options
-    tableDisplay.addEventListener('copy', (e) => {
-        if (!excludeHiddenRowsEl.checked && !excludeFilteredEl.checked) return; // let browser handle
-        const data = getFilteredTableHTMLAndText();
-        if (!data) return;
-        e.preventDefault();
-        e.clipboardData.setData('text/html', data.html);
-        e.clipboardData.setData('text/plain', data.text);
-        showToast('Copied (hidden excluded) 📋','success');
-    });
-
-    // ─── Clear ────────────────────────────────────────────────
-    btnClear.addEventListener('click', () => {
-        tableDisplay.innerHTML = '';
-        setEmptyState();
-        pasteZone.focus();
-        showToast('Cleared','info');
-    });
-
-    // ─── Save as Image (with hidden exclusion) ───────────────
-    btnSaveImage.addEventListener('click', () => {
-        if (!hasContent) { showToast('Nothing to export','warning'); return; }
-
-        captureFlash.classList.add('active');
-        setTimeout(() => captureFlash.classList.remove('active'), 120);
-
-        const originalHTML = btnSaveImage.innerHTML;
-        btnSaveImage.innerHTML = `<svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="animation: spin 0.8s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="32 12" stroke-linecap="round"/></svg> Saving...`;
-        btnSaveImage.style.pointerEvents = 'none';
-        btnSaveImage.style.opacity = '0.8';
-
-        if (!document.getElementById('spin-keyframe')) {
-            const styleEl = document.createElement('style');
-            styleEl.id = 'spin-keyframe';
-            styleEl.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
-            document.head.appendChild(styleEl);
-        }
-
-        tableDisplay.classList.add('capture-ready');
-
-        // Build filtered clone for capture
-        const filteredTable = buildFilteredTableClone();
-        const tableCloneWrapper = document.createElement('div');
-        // match original tableDisplay styles but tight
-        tableCloneWrapper.style.position = 'absolute';
-        tableCloneWrapper.style.top = '-9999px';
-        tableCloneWrapper.style.left = '-9999px';
-        tableCloneWrapper.style.padding = '16px';
-        tableCloneWrapper.style.margin = '0';
-        tableCloneWrapper.style.width = 'max-content';
-        tableCloneWrapper.style.minWidth = 'auto';
-        tableCloneWrapper.style.maxWidth = 'none';
-        tableCloneWrapper.style.height = 'auto';
-        tableCloneWrapper.style.display = 'inline-block';
-        tableCloneWrapper.style.background = '#ffffff';
-        tableCloneWrapper.style.borderRadius = '12px';
-        if (filteredTable) {
-            tableCloneWrapper.appendChild(filteredTable);
-        } else {
-            tableCloneWrapper.innerHTML = tableDisplay.innerHTML;
-        }
-
-        document.body.appendChild(tableCloneWrapper);
-
-        requestAnimationFrame(() => {
-            html2canvas(tableCloneWrapper, {
-                scale: 3,
-                backgroundColor: '#ffffff',
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-            }).then((canvas) => {
-                canvas.toBlob((blob) => {
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0,19);
-                    const filename = `table-export-${timestamp}.png`;
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    showToast('Image saved! 📸 ' + filename, 'success');
-                }, 'image/png', 1.0);
-            }).catch((err)=>{
-                console.error('html2canvas error:', err);
-                showToast('Failed to capture image. Try again.','warning');
-            }).finally(()=>{
-                document.body.removeChild(tableCloneWrapper);
-                tableDisplay.classList.remove('capture-ready');
-                btnSaveImage.innerHTML = originalHTML;
-                btnSaveImage.style.pointerEvents = '';
-                btnSaveImage.style.opacity = '';
-            });
-        });
-    });
-
-    // ─── Toast ────────────────────────────────────────────────
-    function showToast(message, type='info'){
-        if (toastTimer) clearTimeout(toastTimer);
-        const existingToasts = toastContainer.querySelectorAll('.toast');
-        if (existingToasts.length >= 2){
-            const oldest = existingToasts[existingToasts.length-1];
-            oldest.classList.add('out');
-            setTimeout(()=>oldest.remove(),300);
-        }
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        const dotColor = type==='success'?'#34d399': type==='warning'?'#fbbf24':'#60a5fa';
-        toast.innerHTML = `<span class="toast-dot" style="background:${dotColor};"></span>${message}`;
-        toastContainer.appendChild(toast);
-        toastTimer = setTimeout(()=>{
-            toast.classList.add('out');
-            setTimeout(()=>{if(toast.parentNode) toast.remove();},300);
-        },2800);
-    }
-
-    document.addEventListener('keydown', function(e){
-        if ((e.ctrlKey||e.metaKey) && e.key==='s'){
-            if (hasContent){ e.preventDefault(); btnSaveImage.click(); }
-        }
-        if (e.key==='Escape' && hasContent){
-            const activeEl = document.activeElement;
-            if (!activeEl || (activeEl.tagName!=='INPUT' && activeEl.tagName!=='TEXTAREA' && !activeEl.isContentEditable)){
-                e.preventDefault(); btnClear.click();
-            }
-        }
-    });
-
-    setEmptyState();
-    btnClear.style.display = '';
-    btnSaveImage.style.display = '';
-    setTimeout(()=>{ if(!hasContent) pasteZone.focus(); },600);
-    console.log('📋 Table Paste & Export ready (v4 – exclude hidden/filtered)');
-})();
-</script>
+            console.log('📋 Table Paste & Export ready (v3 – tight crop image export)');
+        })();
+    </script>
 </body>
+
 </html>
