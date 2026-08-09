@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Table Paste & Export — Clipboard to Image</title>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">
     </script>
@@ -27,6 +27,8 @@
             --shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
             --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
             --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.14), 0 8px 20px rgba(0, 0, 0, 0.06);
+            --shadow-toggle: 0 2px 6px rgba(0, 0, 0, 0.08);
+            --toggle-bg: #d1d5db;
             --radius-sm: 10px;
             --radius: 16px;
             --radius-lg: 20px;
@@ -61,7 +63,6 @@
                 radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.01) 0%, transparent 80%);
         }
 
-        /* ─── Main Card ─────────────────────── */
         .app-card {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -81,7 +82,6 @@
                 opacity: 0;
                 transform: translateY(24px) scale(0.97);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
@@ -92,7 +92,6 @@
             box-shadow: var(--shadow-xl);
         }
 
-        /* ─── Header ───────────────────────── */
         .app-header {
             display: flex;
             align-items: center;
@@ -157,13 +156,56 @@
             flex-shrink: 0;
         }
 
+        /* ─── Toggle Switch ─────────────────── */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            user-select: none;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 38px;
+            height: 22px;
+            background: var(--toggle-bg);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            flex-shrink: 0;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+        }
+        .toggle-switch.active {
+            background: var(--accent);
+        }
+        .toggle-switch .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform var(--transition-fast);
+            box-shadow: var(--shadow-sm);
+        }
+        .toggle-switch.active .toggle-knob {
+            transform: translateX(16px);
+        }
+        .toggle-label {
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
         /* ─── Buttons ──────────────────────── */
         .btn {
             display: inline-flex;
             align-items: center;
             gap: 7px;
             padding: 10px 16px;
-            border-radius: 25px;
+            border-radius: 22px;
             font-size: 0.875rem;
             font-weight: 600;
             cursor: pointer;
@@ -283,7 +325,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Empty state styling */
         .paste-zone.idle {
             border: 2.5px dashed var(--border-dashed);
             background: #fafbfd;
@@ -303,7 +344,6 @@
             box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.07), inset 0 0 0 1px rgba(79, 110, 247, 0.06);
         }
 
-        /* Filled state styling */
         .paste-zone.filled {
             border: 1.5px solid transparent;
             background: #fff;
@@ -321,14 +361,12 @@
                 box-shadow: var(--shadow-sm);
                 border-color: var(--accent-light);
             }
-
             to {
                 box-shadow: var(--shadow);
                 border-color: transparent;
             }
         }
 
-        /* The scrollable table container */
         .table-viewport {
             width: 100%;
             overflow-x: auto;
@@ -362,7 +400,6 @@
             background: transparent;
         }
 
-        /* The actual pasted content area */
         .table-display {
             padding: 12px 8px;
             display: inline-block;
@@ -376,7 +413,6 @@
                 opacity: 0;
                 transform: translateY(8px) scale(0.985);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
@@ -391,7 +427,6 @@
             animation: contentFadeIn 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
         }
 
-        /* Preserve table styles from Excel/Sheets */
         .table-display table {
             border-collapse: collapse;
             font-size: inherit;
@@ -402,10 +437,10 @@
         .table-display table td,
         .table-display table th {
             padding: 6px 10px;
-            vertical-align: middle;
+            vertical-align: top;
+            border: 1px solid #d1d5db;
         }
 
-        /* ─── Placeholder ──────────────────── */
         .placeholder-content {
             display: flex;
             flex-direction: column;
@@ -434,12 +469,10 @@
         }
 
         @keyframes float {
-
             0%,
             100% {
                 transform: translateY(0);
             }
-
             50% {
                 transform: translateY(-8px);
             }
@@ -479,7 +512,6 @@
             font-family: var(--font);
         }
 
-        /* ─── Toast Notifications ──────────── */
         .toast-container {
             position: fixed;
             bottom: 28px;
@@ -542,7 +574,6 @@
                 opacity: 0;
                 transform: translateY(20px) scale(0.9);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
@@ -554,7 +585,6 @@
                 opacity: 1;
                 transform: translateY(0) scale(1);
             }
-
             to {
                 opacity: 0;
                 transform: translateY(14px) scale(0.88);
@@ -580,7 +610,6 @@
             background: #60a5fa;
         }
 
-        /* ─── Capture flash overlay ────────── */
         .capture-flash {
             position: fixed;
             inset: 0;
@@ -596,14 +625,12 @@
             transition: opacity 0s;
         }
 
-        /* Freeze class for sharp capture (no animations) */
         .capture-ready {
             animation: none !important;
             transition: none !important;
             transform: none !important;
         }
 
-        /* ─── Responsive ──────────────────── */
         @media (max-width: 640px) {
             .app-header {
                 padding: 14px 16px;
@@ -666,15 +693,28 @@
                 font-size: 0.78rem;
                 max-width: 260px;
             }
+
+            .toggle-label {
+                font-size: 0.7rem;
+            }
+            .toggle-switch {
+                width: 32px;
+                height: 18px;
+            }
+            .toggle-switch .toggle-knob {
+                width: 14px;
+                height: 14px;
+            }
+            .toggle-switch.active .toggle-knob {
+                transform: translateX(14px);
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <!-- ─── App Card ──────────────────────── -->
     <div class="app-card" id="appCard">
-        <!-- Header -->
         <header class="app-header">
             <div class="header-left">
                 <div class="logo-icon" aria-hidden="true">
@@ -699,6 +739,12 @@
                     </svg>
                     Clear
                 </button>
+                <span class="toggle-wrapper" title="When enabled, rows that are hidden (display:none, visibility:hidden, or hidden attribute) will be removed from pasted tables.">
+                    <span class="toggle-switch" id="toggleHidden" role="checkbox" aria-checked="false" tabindex="0">
+                        <span class="toggle-knob"></span>
+                    </span>
+                    <span class="toggle-label" id="toggleLabel">Hide hidden rows</span>
+                </span>
                 <button class="btn btn-primary" id="btnSaveImage" title="Save as PNG image (Ctrl+S)">
                     <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -711,10 +757,8 @@
             </div>
         </header>
 
-        <!-- Display / Paste Area -->
         <div class="display-wrapper" id="displayWrapper">
             <div class="paste-zone idle" id="pasteZone" tabindex="0" role="region" aria-label="Paste area">
-                <!-- Placeholder (visible when empty) -->
                 <div class="placeholder-content" id="placeholderContent">
                     <div class="placeholder-icon-wrapper">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -728,12 +772,11 @@
                     </div>
                     <span class="placeholder-title">Paste your table here</span>
                     <span class="placeholder-desc">
-                        Copy from <strong>Excel</strong> or <strong>Google Sheets</strong>,<br>
+                        Copy from <strong>Excel</strong> or <strong>Google Sheets</strong>,<br />
                         then press <span class="placeholder-kbd">Ctrl</span>+<span class="placeholder-kbd">V</span>
                         or click here and paste.
                     </span>
                 </div>
-                <!-- Table viewport (visible when filled) -->
                 <div class="table-viewport" id="tableViewport" style="display:none;">
                     <div class="table-display" id="tableDisplay"></div>
                 </div>
@@ -741,13 +784,11 @@
         </div>
     </div>
 
-    <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
-    <!-- Capture flash -->
     <div class="capture-flash" id="captureFlash"></div>
 
     <script>
-        (function () {
+        (function() {
             // ─── DOM References ──────────────────
             const appCard = document.getElementById('appCard');
             const pasteZone = document.getElementById('pasteZone');
@@ -761,6 +802,7 @@
             const displayWrapper = document.getElementById('displayWrapper');
 
             let hasContent = false;
+            let excludeHiddenRows = false;
             let currentTableHTML = '';
             let toastTimer = null;
 
@@ -768,9 +810,8 @@
             function setFilledState(html) {
                 currentTableHTML = html;
                 tableDisplay.innerHTML = html;
-                // Trigger refresh animation
                 tableDisplay.classList.remove('refresh-anim');
-                void tableDisplay.offsetWidth; // force reflow
+                void tableDisplay.offsetWidth;
                 tableDisplay.classList.add('refresh-anim');
 
                 placeholderContent.style.display = 'none';
@@ -780,23 +821,19 @@
                 appCard.classList.add('has-content');
                 pasteZone.style.cursor = 'default';
                 hasContent = true;
-                btnClear.style.display = '';
-                btnSaveImage.style.display = '';
 
-                // Auto-scroll to show the table
                 requestAnimationFrame(() => {
                     tableViewport.scrollTop = 0;
                     tableViewport.scrollLeft = 0;
                 });
 
-                // Adjust min-height of display wrapper
                 displayWrapper.style.minHeight = Math.max(180, tableDisplay.scrollHeight + 80) + 'px';
             }
 
             function setEmptyState() {
                 currentTableHTML = '';
                 tableDisplay.innerHTML = '';
-                placeholderContent.style.display = '';
+                placeholderContent.style.display = 'flex';
                 tableViewport.style.display = 'none';
                 pasteZone.classList.add('idle');
                 pasteZone.classList.remove('filled');
@@ -806,21 +843,23 @@
                 displayWrapper.style.minHeight = '320px';
             }
 
-            // ─── Generate table from plain text (tab‑separated) ──
+            // ─── Generate table from plain text ──
             function textToTable(plainText) {
                 const lines = plainText.split(/\r?\n/).filter(line => line.trim() !== '');
                 if (lines.length === 0) return null;
-                const rows = lines.map(line => line.split('\t'));
-                const maxCols = Math.max(...rows.map(r => r.length));
-                // Build table HTML with basic styling for visibility
+                const maxCols = Math.max(...lines.map(line => line.split('\t').length));
+                const rows = lines.map(line => {
+                    const cells = line.split('\t');
+                    while (cells.length < maxCols) cells.push('');
+                    return cells;
+                });
                 let html = '<table style="border-collapse: collapse; width: auto; font-size: 0.9rem;">';
                 rows.forEach(row => {
                     html += '<tr>';
-                    for (let i = 0; i < maxCols; i++) {
-                        const cell = row[i] || '';
+                    row.forEach(cell => {
                         html +=
                             `<td style="border: 1px solid #d1d5db; padding: 6px 10px; white-space: nowrap;">${escapeHTML(cell)}</td>`;
-                    }
+                    });
                     html += '</tr>';
                 });
                 html += '</table>';
@@ -833,11 +872,44 @@
                 return div.innerHTML;
             }
 
+            // ─── Remove hidden rows ──────────────
+            function removeHiddenRows(table) {
+                const rows = table.querySelectorAll('tr');
+                let removed = 0;
+                rows.forEach(row => {
+                    const style = row.style;
+                    const isHidden = row.hasAttribute('hidden') ||
+                        style.display === 'none' ||
+                        style.visibility === 'hidden' ||
+                        (window.getComputedStyle && window.getComputedStyle(row).display === 'none');
+                    if (isHidden) {
+                        row.remove();
+                        removed++;
+                    }
+                });
+                return removed;
+            }
+
+            function processTablesForHiddenRows(container) {
+                const tables = container.querySelectorAll('table');
+                let totalRemoved = 0;
+                tables.forEach(table => {
+                    totalRemoved += removeHiddenRows(table);
+                    if (table.querySelectorAll('tr').length === 0) {
+                        table.remove();
+                    }
+                });
+                if (totalRemoved > 0) {
+                    showToast(`Removed ${totalRemoved} hidden row${totalRemoved > 1 ? 's' : ''}`, 'info');
+                }
+                return container;
+            }
+
             // ─── Clipboard Paste Handler ─────────
             function handlePaste(e) {
                 const activeEl = document.activeElement;
                 if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' ||
-                    activeEl.isContentEditable)) {
+                        activeEl.isContentEditable)) {
                     if (activeEl !== pasteZone && !pasteZone.contains(activeEl)) {
                         return;
                     }
@@ -853,10 +925,17 @@
 
                 e.preventDefault();
 
+                let handled = false;
+
                 // Try to extract tables from HTML
-                if (htmlData) {
+                if (htmlData && htmlData.includes('<table')) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = htmlData;
+
+                    if (excludeHiddenRows) {
+                        processTablesForHiddenRows(tempDiv);
+                    }
+
                     const tables = tempDiv.querySelectorAll('table');
 
                     if (tables.length > 0) {
@@ -870,24 +949,22 @@
                         });
                         setFilledState(tableFragments.join(''));
                         showToast('Table pasted successfully!', 'success');
-                        return;
+                        handled = true;
                     }
-
-                    // If HTML exists but no <table> found, fall through to plain text logic
                 }
 
-                // If plain text contains tabs, convert to table
-                if (plainText && plainText.includes('\t')) {
+                // Fallback: plain text with tabs
+                if (!handled && plainText && plainText.includes('\t')) {
                     const generatedTable = textToTable(plainText);
                     if (generatedTable) {
                         setFilledState(generatedTable);
                         showToast('Table reconstructed from tab‑separated text', 'info');
-                        return;
+                        handled = true;
                     }
                 }
 
-                // Last resort: display plain text as preformatted
-                if (plainText && plainText.trim()) {
+                // Last resort: plain text as preformatted
+                if (!handled && plainText && plainText.trim()) {
                     const preHTML =
                         `<pre style="font-family: monospace; white-space: pre-wrap; padding: 16px; background: #f9fafb; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; color: #1a1a2e;">${escapeHTML(plainText.trim())}</pre>`;
                     setFilledState(preHTML);
@@ -895,17 +972,16 @@
                 }
             }
 
-            // ─── Global paste listener ──────────
             document.addEventListener('paste', handlePaste);
-            pasteZone.addEventListener('paste', function (e) {
+            pasteZone.addEventListener('paste', function(e) {
                 if (!hasContent) pasteZone.focus();
             });
-            pasteZone.addEventListener('click', function (e) {
+            pasteZone.addEventListener('click', function(e) {
                 if (!hasContent) pasteZone.focus();
             });
 
             // ─── Clear Button ───────────────────
-            btnClear.addEventListener('click', function () {
+            btnClear.addEventListener('click', function() {
                 if (hasContent) {
                     tableDisplay.style.opacity = '0';
                     tableDisplay.style.transform = 'translateY(6px) scale(0.98)';
@@ -921,8 +997,8 @@
                 }
             });
 
-            // ─── Save Image Button (tightly cropped, no white allowance) ──
-            btnSaveImage.addEventListener('click', function () {
+            // ─── Save Image Button ──────────────
+            btnSaveImage.addEventListener('click', function() {
                 if (!hasContent || !currentTableHTML) {
                     showToast('Nothing to save. Paste a table first.', 'warning');
                     return;
@@ -944,14 +1020,13 @@
                 if (!document.getElementById('spin-keyframe')) {
                     const styleEl = document.createElement('style');
                     styleEl.id = 'spin-keyframe';
-                    styleEl.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+                    styleEl.textContent =
+                        '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
                     document.head.appendChild(styleEl);
                 }
 
-                // Freeze animations / transforms for a pixel‑perfect capture
                 tableDisplay.classList.add('capture-ready');
 
-                // Clone the table content into a zero‑padding container cropped tightly to table bounds
                 const tableClone = tableDisplay.cloneNode(true);
                 tableClone.style.position = 'absolute';
                 tableClone.style.top = '-9999px';
@@ -962,9 +1037,8 @@
                 tableClone.style.minWidth = 'auto';
                 tableClone.style.maxWidth = 'none';
                 tableClone.style.height = 'auto';
-                tableClone.style.display = 'inline-block';   // shrink-wrap tightly to table dimensions
+                tableClone.style.display = 'inline-block';
 
-                // Remove left/right margins from all inner elements in the clone
                 tableClone.querySelectorAll('*').forEach((el) => {
                     el.style.marginLeft = '0';
                     el.style.marginRight = '0';
@@ -972,25 +1046,25 @@
 
                 document.body.appendChild(tableClone);
 
-                // Wait for the clone to be measured, then capture
-                requestAnimationFrame(() => {
+                setTimeout(() => {
                     html2canvas(tableClone, {
-                        scale: 3,                     // high resolution
+                        scale: 3,
                         backgroundColor: '#ffffff',
                         useCORS: true,
                         allowTaint: true,
                         logging: false,
                     }).then((canvas) => {
                         canvas.toBlob((blob) => {
-                            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0,
+                            19);
                             const filename = `table-export-${timestamp}.png`;
                             const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
                             URL.revokeObjectURL(url);
                             showToast('Image saved! 📸 ' + filename, 'success');
                         }, 'image/png', 1.0);
@@ -998,14 +1072,13 @@
                         console.error('html2canvas error:', err);
                         showToast('Failed to capture image. Try again.', 'warning');
                     }).finally(() => {
-                        // Cleanup
                         document.body.removeChild(tableClone);
                         tableDisplay.classList.remove('capture-ready');
                         btnSaveImage.innerHTML = originalHTML;
                         btnSaveImage.style.pointerEvents = '';
                         btnSaveImage.style.opacity = '';
                     });
-                });
+                }, 50);
             });
 
             // ─── Toast System ───────────────────
@@ -1024,12 +1097,12 @@
                 toastContainer.appendChild(toast);
                 toastTimer = setTimeout(() => {
                     toast.classList.add('out');
-                    setTimeout(() => {if (toast.parentNode) toast.remove();}, 300);
+                    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 300);
                 }, 2800);
             }
 
             // ─── Keyboard Shortcuts ─────────────
-            document.addEventListener('keydown', function (e) {
+            document.addEventListener('keydown', function(e) {
                 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                     if (hasContent) {
                         e.preventDefault();
@@ -1039,22 +1112,49 @@
                 if (e.key === 'Escape' && hasContent) {
                     const activeEl = document.activeElement;
                     if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA' && !activeEl
-                        .isContentEditable)) {
+                            .isContentEditable)) {
                         e.preventDefault();
                         btnClear.click();
                     }
                 }
             });
 
+            // ─── Toggle for Excluding Hidden Rows ──
+            const toggleHidden = document.getElementById('toggleHidden');
+            const toggleLabel = document.getElementById('toggleLabel');
+
+            function updateToggleState() {
+                toggleHidden.classList.toggle('active', excludeHiddenRows);
+                toggleHidden.setAttribute('aria-checked', excludeHiddenRows ? 'true' : 'false');
+                toggleLabel.textContent = excludeHiddenRows ? 'Hide hidden rows' : 'Include hidden rows';
+            }
+
+            function toggleExcludeHidden() {
+                excludeHiddenRows = !excludeHiddenRows;
+                updateToggleState();
+                showToast(excludeHiddenRows ? 'Hidden rows will be excluded on paste' : 'All rows will be kept', 'info');
+            }
+
+            toggleHidden.addEventListener('click', toggleExcludeHidden);
+            toggleLabel.addEventListener('click', toggleExcludeHidden);
+            toggleHidden.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleExcludeHidden();
+                }
+            });
+            toggleHidden.setAttribute('role', 'checkbox');
+            toggleHidden.setAttribute('aria-checked', 'false');
+            toggleHidden.setAttribute('tabindex', '0');
+
             // ─── Initialization ─────────────────
             setEmptyState();
-            btnClear.style.display = '';
-            btnSaveImage.style.display = '';
+            updateToggleState();
             setTimeout(() => {
                 if (!hasContent) pasteZone.focus();
             }, 600);
 
-            console.log('📋 Table Paste & Export ready (v3 – tight crop image export)');
+            console.log('📋 Table Paste & Export ready (v3 – with hidden row filter)');
         })();
     </script>
 </body>
